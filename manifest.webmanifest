@@ -1,0 +1,13 @@
+{
+  "name": "約瑟七豐年存糧",
+  "short_name": "七豐年存糧",
+  "description": "點兩個相鄰的莊稼交換,排成一排 3 個同款就收進糧倉!七豐年存糧,神預先看顧(創世記 41,和合本)",
+  "start_url": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#ead9a8",
+  "theme_color": "#a07828",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
