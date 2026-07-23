@@ -626,14 +626,15 @@
     _draw() {
       const { ctx, W, H } = this
       if (!W) return
-      // 雨前的天空+青草地
+      // 豐年的天空:藍天 → 綠草地 → 金黃麥田(07-24 使用者點名:要有綠草地與金黃稻穗色)
       const sky = ctx.createLinearGradient(0, 0, 0, H)
-      sky.addColorStop(0, '#bcd2e8'); sky.addColorStop(0.5, '#ead9a8'); sky.addColorStop(0.72, '#d8bc72'); sky.addColorStop(1, '#c0a050')
+      sky.addColorStop(0, '#bcd6ec'); sky.addColorStop(0.48, '#dcebc8'); sky.addColorStop(0.62, '#a8cc7e'); sky.addColorStop(0.78, '#e2c878'); sky.addColorStop(1, '#d0a84e')
       ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H)
       const { s, ox, oy } = this._view()
       ctx.save()
       ctx.setTransform(s, 0, 0, s, ox, oy)
       this._clouds()
+      this._wheatField()
       if (this.state === 'intro') { this._drawIntro(); this._fsBtn(); ctx.restore(); return }
       if (this.state === 'map') { this._drawMap(); this._fsBtn(); ctx.restore(); return }
       const g = this._geo()
@@ -758,6 +759,27 @@
       }
       ctx.restore()
       if (this.state === 'win') this._drawWinCard()
+    }
+
+    // 🌾 金黃麥穗(豐年:底部麥稈叢隨風搖,左右各一簇;創 41:47 豐年五穀茂盛)
+    _wheatField() {
+      const { ctx } = this
+      for (const [bx, count] of [[30, 4], [925, 4]]) {
+        for (let i = 0; i < count; i++) {
+          const rx = bx + i * 12
+          const sway = Math.sin(this._t * 1.3 + rx) * 4
+          ctx.strokeStyle = '#c8a24a'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'
+          ctx.beginPath(); ctx.moveTo(rx, 540); ctx.quadraticCurveTo(rx + 4 + sway, 496, rx + 2 + sway, 462); ctx.stroke()
+          ctx.lineCap = 'butt'
+          // 穗粒(兩排小橢圓)
+          ctx.fillStyle = '#e8c868'
+          for (let g2 = 0; g2 < 4; g2++) {
+            const gy = 462 + g2 * 9
+            ctx.beginPath(); ctx.ellipse(rx - 2.5 + sway, gy, 3, 5.5, -0.4, 0, 7); ctx.fill()
+            ctx.beginPath(); ctx.ellipse(rx + 6.5 + sway, gy, 3, 5.5, 0.4, 0, 7); ctx.fill()
+          }
+        }
+      }
     }
 
     _clouds() {
@@ -885,24 +907,46 @@
         ctx.lineCap = 'butt'
       }
       const face = (fy = 0) => {
-        const er = r * 0.14
-        ctx.fillStyle = '#fff'
-        ctx.beginPath(); ctx.arc(-r * 0.32, fy - r * 0.1, er * 1.55, 0, 7); ctx.fill()
-        ctx.beginPath(); ctx.arc(r * 0.32, fy - r * 0.1, er * 1.55, 0, 7); ctx.fill()
-        ctx.fillStyle = '#2c2416'
-        ctx.beginPath(); ctx.arc(-r * 0.3, fy - r * 0.08, er, 0, 7); ctx.fill()
-        ctx.beginPath(); ctx.arc(r * 0.34, fy - r * 0.08, er, 0, 7); ctx.fill()
-        ctx.fillStyle = '#fff'
-        ctx.beginPath(); ctx.arc(-r * 0.34, fy - r * 0.14, er * 0.42, 0, 7); ctx.fill()
-        ctx.beginPath(); ctx.arc(r * 0.3, fy - r * 0.14, er * 0.42, 0, 7); ctx.fill()
-        ctx.fillStyle = 'rgba(255,255,255,0.7)'
-        ctx.beginPath(); ctx.arc(-r * 0.26, fy - r * 0.03, er * 0.2, 0, 7); ctx.fill()
-        ctx.beginPath(); ctx.arc(r * 0.38, fy - r * 0.03, er * 0.2, 0, 7); ctx.fill()
-        ctx.fillStyle = 'rgba(240,120,120,0.4)' // 腮紅
-        ctx.beginPath(); ctx.arc(-r * 0.52, fy + r * 0.18, er * 1.2, 0, 7); ctx.fill()
-        ctx.beginPath(); ctx.arc(r * 0.52, fy + r * 0.18, er * 1.2, 0, 7); ctx.fill()
-        ctx.strokeStyle = '#4a3420'; ctx.lineWidth = Math.max(1.2, r * 0.05) // 微笑
-        ctx.beginPath(); ctx.arc(0, fy + r * 0.12, r * 0.18, 0.25 * Math.PI, 0.75 * Math.PI); ctx.stroke()
+        // ★ 07-24 v3:大眼睛+眨眼(依位置錯開,絕不全場同步;reduced-motion 不眨)+興奮 D 型嘴
+        const er = r * 0.18
+        const blink = !this.reduced && ((this._t + x * 7.13 + y * 3.71) % 4.6) < 0.12
+        if (blink) {
+          ctx.strokeStyle = '#2c2416'; ctx.lineWidth = Math.max(1.6, r * 0.07); ctx.lineCap = 'round'
+          ctx.beginPath(); ctx.moveTo(-r * 0.44, fy - r * 0.08); ctx.lineTo(-r * 0.16, fy - r * 0.08); ctx.stroke()
+          ctx.beginPath(); ctx.moveTo(r * 0.2, fy - r * 0.08); ctx.lineTo(r * 0.48, fy - r * 0.08); ctx.stroke()
+          ctx.lineCap = 'butt'
+        } else {
+          ctx.fillStyle = '#fff'
+          ctx.beginPath(); ctx.arc(-r * 0.32, fy - r * 0.1, er * 1.45, 0, 7); ctx.fill()
+          ctx.beginPath(); ctx.arc(r * 0.32, fy - r * 0.1, er * 1.45, 0, 7); ctx.fill()
+          ctx.fillStyle = '#2c2416'
+          ctx.beginPath(); ctx.arc(-r * 0.3, fy - r * 0.08, er, 0, 7); ctx.fill()
+          ctx.beginPath(); ctx.arc(r * 0.34, fy - r * 0.08, er, 0, 7); ctx.fill()
+          ctx.fillStyle = '#fff'
+          ctx.beginPath(); ctx.arc(-r * 0.35, fy - r * 0.15, er * 0.42, 0, 7); ctx.fill()
+          ctx.beginPath(); ctx.arc(r * 0.29, fy - r * 0.15, er * 0.42, 0, 7); ctx.fill()
+          ctx.fillStyle = 'rgba(255,255,255,0.7)'
+          ctx.beginPath(); ctx.arc(-r * 0.25, fy - r * 0.02, er * 0.2, 0, 7); ctx.fill()
+          ctx.beginPath(); ctx.arc(r * 0.39, fy - r * 0.02, er * 0.2, 0, 7); ctx.fill()
+        }
+        const bl = ctx.createRadialGradient(-r * 0.54, fy + r * 0.22, 0, -r * 0.54, fy + r * 0.22, er * 1.25)
+        bl.addColorStop(0, 'rgba(245,130,130,0.5)'); bl.addColorStop(1, 'rgba(245,130,130,0)')
+        ctx.fillStyle = bl
+        ctx.beginPath(); ctx.arc(-r * 0.54, fy + r * 0.22, er * 1.25, 0, 7); ctx.fill()
+        const br = ctx.createRadialGradient(r * 0.54, fy + r * 0.22, 0, r * 0.54, fy + r * 0.22, er * 1.25)
+        br.addColorStop(0, 'rgba(245,130,130,0.5)'); br.addColorStop(1, 'rgba(245,130,130,0)')
+        ctx.fillStyle = br
+        ctx.beginPath(); ctx.arc(r * 0.54, fy + r * 0.22, er * 1.25, 0, 7); ctx.fill()
+        if (k > 0.05) { // 興奮(收取/落地 Q 彈)=開心 D 型嘴+小舌頭
+          ctx.fillStyle = '#4a3420'
+          ctx.beginPath(); ctx.arc(0, fy + r * 0.14, r * 0.2, 0, Math.PI); ctx.closePath(); ctx.fill()
+          ctx.fillStyle = '#e89090'
+          ctx.beginPath(); ctx.arc(0, fy + r * 0.3, r * 0.11, Math.PI, 0); ctx.fill()
+        } else { // 平時=加深加寬的微笑
+          ctx.strokeStyle = '#4a3420'; ctx.lineWidth = Math.max(1.6, r * 0.065); ctx.lineCap = 'round'
+          ctx.beginPath(); ctx.arc(0, fy + r * 0.08, r * 0.26, 0.18 * Math.PI, 0.82 * Math.PI); ctx.stroke()
+          ctx.lineCap = 'butt'
+        }
       }
       if (kind === 'wheat') { // 金麥穗:頂上三根麥芒+麥粒
         body('#f0c85a', '#cda43a')
