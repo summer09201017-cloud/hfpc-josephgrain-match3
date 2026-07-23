@@ -6,7 +6,7 @@
 // 玩法:七個大豐年,田裡五穀豐登!點兩個相鄰的莊稼交換;排成一排 3 個同款=「收進糧倉」
 //   (倉窗一格格亮起);新的莊稼源源長出來(神賜豐年=補位的經文!)。存滿目標倉數——
 //   荒年來到,埃及全地都有糧!⑤瘦穗子(法老夢裡被東風吹焦的,創 41:23)偶爾飄來擋路,
-//   風一吹自己就走;連 4+ 出「豐收捆」,點一下整排整列一起入倉(豐收滿溢)。
+//   風一吹自己就走;連 4+ 出「豐收捆」,點一下整排整列＋旁邊一圈一起入倉(豐收滿溢)。
 // ★ 神學守法:①收進糧倉,絕不畫成消滅;②補位=神賜豐年;③永不會輸;④信息在「神預先看顧、
 //   保全性命」(創 50:20),不做高分炫光。
 (function () {
@@ -40,7 +40,7 @@
     title: '🌾 約瑟七豐年存糧',
     ref: '創世記 41:29,48-49',
     intro1: '「埃及遍地必來七個大豐年，」(創 41:29)',
-    how: '七個大豐年,田裡五穀豐登!點一個莊稼、再點旁邊的一個交換位置;排成一排 3 個同款就「收進糧倉」,新的莊稼會源源長出來。連出 4 個以上會出現豐收捆——點一下,整排整列一起入倉!存滿目標倉數,荒年來到全地都有糧。放心慢慢收——沒有步數限制。',
+    how: '七個大豐年,田裡五穀豐登!點一個莊稼、再點旁邊的一個交換位置;排成一排 3 個同款就「收進糧倉」,新的莊稼會源源長出來。連出 4 個以上會出現豐收捆——點一下,整排整列＋旁邊一圈一起入倉!存滿目標倉數,荒年來到全地都有糧。放心慢慢收——沒有步數限制。',
     pick: '約瑟站在倉前,等你一起收糧:',
     hud: (p, goal) => `🌾 已存 ${p}/${goal} 倉`,
     gather: '入倉!積蓄五穀',
@@ -49,7 +49,7 @@
     noswap: '這樣排不成一排——輕輕放回去',
     crowCome: '瘦穗子飄來擋路了…(創 41:23)',
     crowGo: '東風一吹,瘦穗子走了',
-    rainbowBorn: '豐收捆!點它,整排整列一起入倉',
+    rainbowBorn: '豐收捆!點它,整排整列＋旁邊一圈一起入倉',
     rainbowGo: '一大批一起入倉了!',
     closeLine: '約瑟聚歛埃及地七個豐年一切的糧食，把糧食積存在各城裡。(創 41:48)',
     winTitle: '🎉 倉都滿了,荒年不怕!',
@@ -58,6 +58,7 @@
     teachVerse: '從前你們的意思是要害我，但神的意思原是好的，要保全許多人的性命，成就今日的光景。',
     teachRef: '創世記 50:20',
     teach: '七個豐年不是運氣,是神預先看見、預先預備——祂把夢給法老,把智慧給約瑟,把糧食存滿倉,為要在荒年保全許多人的性命。今天神也一樣走在你前面:你還沒遇見的難處,祂已經預備好了恩典。',
+    bind: '金繩捆一捆…',
     mapTitle: '🗺 關卡地圖',
     mapHint: '點亮過的關可重玩拿星星・⏱=限時衝刺關',
     sprintGo: (sec) => `⏱ 限時衝刺!${sec} 秒內收越多越好!`,
@@ -87,6 +88,9 @@
       this.flyers = [] // 上船中的動物
       this.birds = [] // 飛走中的烏鴉
       this.pops = [] // 收取瞬間的 Q 彈圈
+      this.pending = null // 兩拍收取:第一拍=金繩捆好亮 0.7s
+      this.shocks = [] // 💥 爆收衝擊波光環
+      this.sparks = [] // 💥 爆收煙火
       this.confetti = []
       this.shakeBack = null
       this.toasts = []
@@ -180,7 +184,7 @@
       this.sel = null
       this.lock = 0.5
       this.collected = 0
-      this.flyers = []; this.birds = []; this.pops = []; this.toasts = []; this.confetti = []
+      this.flyers = []; this.birds = []; this.pops = []; this.toasts = []; this.confetti = []; this.shocks = []; this.sparks = []; this.pending = null
       this.crowT = 14
       this.blessPlayed = false
       this.state = 'play'
@@ -234,7 +238,7 @@
     _hasMove() {
       const n = this.cfg.size
       const g = this.grid
-      // 場上有彩虹=永遠有一手(點它就整排整列上船)
+      // 場上有彩虹=永遠有一手(點它就整排整列＋旁邊一圈上船)
       for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (g[r][c].kind === 'rainbow') return true
       const trySwap = (r1, c1, r2, c2) => {
         const a = g[r1][c1].kind, b = g[r2][c2].kind
@@ -292,7 +296,29 @@
 
     // 收取所有現成 3+ 連 → 4+ 連的中位格變彩虹方塊 → 重力補位;回傳收了幾隻
     _resolve() {
-      const g = this._geo()
+      const geo = this._geo()
+      if (this.pending) {
+        const { hit, rainbowAt } = this.pending
+        this.pending = null
+        let count = 0
+        for (const key of hit) {
+          const [r, c] = key.split(',').map(Number)
+          const p = this._cellXY(r, c, geo)
+          this.flyers.push({ sx: p.x, sy: p.y, x: p.x, y: p.y, kind: this.grid[r][c].kind, t: 0 })
+          this.pops.push({ x: p.x, y: p.y, t: 0 })
+          this.grid[r][c].kind = null
+          count++
+        }
+        for (const rb of rainbowAt) {
+          const cell = this.grid[rb.r][rb.c]
+          cell.kind = 'rainbow'; cell.sq = 0.3
+          this.toasts.push({ text: T.rainbowBorn, t: this._t })
+          this._tone(659, 0.12, 0, 'triangle', 0.1); this._tone(784, 0.14, 0.1, 'triangle', 0.1); this._tone(988, 0.2, 0.2, 'triangle', 0.1)
+        }
+        this._gravity()
+        this._tone(523, 0.1, 0, 'triangle', 0.1); this._tone(659, 0.14, 0.08, 'triangle', 0.1)
+        return count
+      }
       const runs = this._scanRuns()
       if (!runs.length) return 0
       const hit = new Set()
@@ -302,27 +328,13 @@
         for (const p of run) hit.add(p.r + ',' + p.c)
       }
       for (const rb of rainbowAt) hit.delete(rb.r + ',' + rb.c)
-      let count = 0
-      for (const key of hit) {
-        const [r, c] = key.split(',').map(Number)
-        const p = this._cellXY(r, c, g)
-        this.flyers.push({ sx: p.x, sy: p.y, x: p.x, y: p.y, kind: this.grid[r][c].kind, t: 0 })
-        this.pops.push({ x: p.x, y: p.y, t: 0 })
-        this.grid[r][c].kind = null
-        count++
-      }
-      for (const rb of rainbowAt) {
-        const cell = this.grid[rb.r][rb.c]
-        cell.kind = 'rainbow'; cell.sq = 0.3
-        this.toasts.push({ text: T.rainbowBorn, t: this._t })
-        this._tone(659, 0.12, 0, 'triangle', 0.1); this._tone(784, 0.14, 0.1, 'triangle', 0.1); this._tone(988, 0.2, 0.2, 'triangle', 0.1)
-      }
-      this._gravity()
-      this._tone(523, 0.1, 0, 'triangle', 0.1); this._tone(659, 0.14, 0.08, 'triangle', 0.1)
-      return count
+      this.pending = { runs, hit, rainbowAt, t: this._t }
+      this.toasts.push({ text: T.bind, t: this._t })
+      this._tone(392, 0.1, 0, 'sine', 0.07)
+      return -1
     }
 
-    // 點彩虹:整排整列一起上船(恩典多給;烏鴉被嚇飛,不算數也不扣分)
+    // 點彩虹:整排整列＋旁邊一圈一起上船(恩典多給;烏鴉被嚇飛,不算數也不扣分)
     _rainbowClear(r, c) {
       const g = this._geo()
       const n = this.cfg.size
@@ -338,6 +350,21 @@
       }
       for (let cc = 0; cc < n; cc++) take(r, cc)
       for (let rr = 0; rr < n; rr++) if (rr !== r) take(rr, c)
+      // 💥 爆收範圍加大(07-24,連鏈家族同款精神):整排整列＋旁邊一圈之外,周圍一圈也一起收
+      for (const [dr, dc] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) {
+        const rr = r + dr, cc = c + dc
+        if (rr >= 0 && cc >= 0 && rr < n && cc < n) take(rr, cc)
+      }
+      // 💥 擴散衝擊波光環(範圍看得見)+煙火 40 顆
+      const pc0 = this._cellXY(r, c, g)
+      this.shocks.push({ x: pc0.x, y: pc0.y, t: 0 })
+      if (!this.reduced) {
+        const FW = ['#ffd54a', '#ff8a5a', '#8ae08a', '#7ab8ff', '#e08ae0']
+        for (let i = 0; i < 40; i++) {
+          const a = Math.random() * Math.PI * 2, v = 90 + Math.random() * 220
+          this.sparks.push({ x: pc0.x, y: pc0.y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 60, t: 0, color: FW[i % 5] })
+        }
+      }
       this.collected += count
       this.rainbowFxT = 1.6
       this.toasts.push({ text: T.rainbowGo, t: this._t })
@@ -366,10 +393,12 @@
         this.lock -= dt
         if (this.lock <= 0 && this.state === 'play') {
           const got = this._resolve()
-          if (got) {
+          if (got === -1) {
+            this.lock = 0.7 // 第一拍:金繩捆好,亮著看清楚
+          } else if (got) {
             this.collected += got
             this.toasts.push({ text: this.collected % (PAIR * 3) < 3 ? T.gather : T.cascade, t: this._t })
-            this.lock = 0.45
+            this.lock = 0.8 // 連鎖放慢,享受觀察
           } else if (this._pairs() >= this.goal) {
             this.state = 'close'
             this.closeT = 2.4
@@ -433,6 +462,10 @@
       this.birds = this.birds.filter((b) => b.t < 1.6)
       for (const p of this.pops) p.t += dt * 3
       this.pops = this.pops.filter((p) => p.t < 1)
+      for (const sfx of this.shocks) sfx.t += dt * 1.8
+      this.shocks = this.shocks.filter((sfx) => sfx.t < 1)
+      for (const sp of this.sparks) { sp.t += dt; sp.x += sp.vx * dt; sp.y += sp.vy * dt; sp.vy += 260 * dt }
+      this.sparks = this.sparks.filter((sp) => sp.t < 0.9)
       if (this.rainbowFxT > 0) this.rainbowFxT -= dt
       for (const c of this.confetti) { c.y += c.vy * dt; c.x += c.vx * dt; c.rot += c.vr * dt }
       this.confetti = this.confetti.filter((c) => c.y < VH + 20)
@@ -631,11 +664,50 @@
         }
         this._tsum(ctx, p.x + dx, p.y + cell.dy, g.D * 0.4, cell.kind, cell.sq, selHere)
       }
+      // 🪢 金繩捆帶:pending 的每條排,金繩把頭尾綁起來+中點繩結+格子亮(先看清楚是一排,再收)
+      if (this.pending) {
+        const blink = 0.55 + 0.45 * Math.sin((this._t - this.pending.t) * 10)
+        for (const run of this.pending.runs) {
+          const a = this._cellXY(run[0].r, run[0].c, g)
+          const b = this._cellXY(run[run.length - 1].r, run[run.length - 1].c, g)
+          ctx.globalAlpha = blink
+          for (const p0 of run) {
+            const p = this._cellXY(p0.r, p0.c, g)
+            ctx.fillStyle = 'rgba(255,225,130,0.35)'
+            ctx.beginPath(); ctx.arc(p.x, p.y + this.grid[p0.r][p0.c].dy, g.D * 0.46, 0, 7); ctx.fill()
+          }
+          ctx.strokeStyle = '#d8a840'; ctx.lineWidth = 5; ctx.lineCap = 'round'
+          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke()
+          ctx.lineCap = 'butt'
+          const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
+          ctx.fillStyle = '#b07828'
+          ctx.beginPath(); ctx.arc(mx, my, 7, 0, 7); ctx.fill()
+          ctx.strokeStyle = '#b07828'; ctx.lineWidth = 3
+          ctx.beginPath(); ctx.moveTo(mx - 8, my + 8); ctx.lineTo(mx + 8, my - 8); ctx.stroke()
+          ctx.globalAlpha = 1
+        }
+      }
       // Q 彈圈(收取瞬間)
       for (const p of this.pops) {
         ctx.globalAlpha = 1 - p.t
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 3
         ctx.beginPath(); ctx.arc(p.x, p.y, 10 + p.t * 26, 0, 7); ctx.stroke()
+        ctx.globalAlpha = 1
+      }
+      // 💥 爆收衝擊波光環(雙圈擴散)+煙火
+      for (const sfx of this.shocks) {
+        const k = sfx.t
+        ctx.globalAlpha = (1 - k) * 0.9
+        ctx.strokeStyle = '#ffd54a'; ctx.lineWidth = 6 * (1 - k) + 2
+        ctx.beginPath(); ctx.arc(sfx.x, sfx.y, 24 + k * 300, 0, 7); ctx.stroke()
+        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 3
+        ctx.beginPath(); ctx.arc(sfx.x, sfx.y, 12 + k * 210, 0, 7); ctx.stroke()
+        ctx.globalAlpha = 1
+      }
+      for (const sp of this.sparks) {
+        ctx.globalAlpha = Math.max(0, 1 - sp.t / 0.9)
+        ctx.fillStyle = sp.color
+        ctx.beginPath(); ctx.arc(sp.x, sp.y, 3.2, 0, 7); ctx.fill()
         ctx.globalAlpha = 1
       }
       // 上船中的動物(飛行途中縮小一點)
