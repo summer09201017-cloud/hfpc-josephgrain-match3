@@ -108,7 +108,7 @@
       this._mapBtns = []
       this._audio = null
       this._bgmOn = false; this._bgmMuted = false; this._bgmGain = null; this._bgmNext = 0; this._bgmStep = 0
-      this._bgmCfg = { vol: 0.9, type: 'triangle', step: 0.34, scale: [174.61,196,220,261.63,293.66,349.23,392,440], bass: [174.61,130.81], bassEvery: 8, btnBg: 'rgba(44,60,28,0.5)', btnFg: '#f4f8e8' }
+      this._bgmCfg = { vol: 0.9, type: 'triangle', step: 0.34, scale: [349.22,392,440,523.26,587.32,698.46,784,880], bass: [174.61,130.81], bassEvery: 8, btnBg: 'rgba(44,60,28,0.5)', btnFg: '#f4f8e8' }
       try { this._bgmMuted = localStorage.getItem('bgm-muted') === '1' } catch {}
       this._voiceEl = null
       this.canFS = !!document.documentElement.requestFullscreen
@@ -625,6 +625,8 @@
         this._bgmStep = 0
       } catch {}
     }
+    // ★ BGM 可聽度修正 0726:實測原設定 RMS −36.5 dBFS、能量最強 188 Hz(手機喇叭放不出來)→
+    //   旋律升八度 + 三角波 + 音量拉高;低音壓低(手機本來就放不出低音)。
     _bgmTick() {
       if (!this._bgmOn || this._bgmMuted || !this._audio) return
       const cfg = this._bgmCfg, ctx = this._audio
@@ -633,10 +635,10 @@
       let guard = 0
       while (this._bgmNext < ahead && guard++ < 64) {
         const i = MEL[this._bgmStep % MEL.length]
-        if (i >= 0) this._bgmNote(cfg.scale[i], cfg.step * 0.92, this._bgmNext, cfg.type, 0.09)
+        if (i >= 0) this._bgmNote(cfg.scale[i], cfg.step * 0.92, this._bgmNext, cfg.type, 0.4)
         if (cfg.bass && this._bgmStep % cfg.bassEvery === 0) {
           const bi = Math.floor(this._bgmStep / cfg.bassEvery) % cfg.bass.length
-          this._bgmNote(cfg.bass[bi], cfg.step * cfg.bassEvery * 0.9, this._bgmNext, 'sine', 0.06)
+          this._bgmNote(cfg.bass[bi], cfg.step * cfg.bassEvery * 0.9, this._bgmNext, 'sine', 0.02)
         }
         this._bgmNext += cfg.step
         this._bgmStep++
