@@ -19,3 +19,7 @@ npx wrangler deploy --name hfpc-josephgrain-match3 --compatibility-date 2026-07-
 ```
 
 改版時 `sw.js` 的 `CACHE_NAME` +1;`.assetsignore` 已擋 `.git`/`.wrangler`。
+
+⚠ SW 快取名單**不可**放 `./index.html`(2026-09-14 全艦隊修,v13):Cloudflare 把 `/index.html` 308 轉到 `/`,
+快取到的是 redirected 回應,裝成 App 打開會 ERR_FAILED。名單只留 `./`、fetch 尾巴加了「導覽離線退回 `./`」;每次 bump 都別再加回去。
+補丁來源:skills repo `static-pwa-ship/patches/patch-sw-index.mjs`(`--cf --write`)。
